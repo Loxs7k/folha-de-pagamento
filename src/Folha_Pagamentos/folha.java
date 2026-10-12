@@ -533,6 +533,14 @@ public class folha {
 		proventos.TotalProventos = proventos.SalarioBase;
 		String nomeFuncionario = resultado.getString("nome");
 		String cargoFuncionario = resultado.getString("cargo");
+		
+		//===================== BUSCAR EMPRESA =====================
+		PreparedStatement stmtEmp = conn.prepareStatement("SELECT nome_fantasia, cnpj FROM empresas WHERE id = ?");
+		stmtEmp.setInt(1, empresaId);
+		ResultSet rsEmp = stmtEmp.executeQuery();
+		rsEmp.next();
+		String nomeEmpresa = rsEmp.getString("nome_fantasia");
+		String cnpjEmpresa = rsEmp.getString("cnpj").replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
 
 		// ===================== CALCULAR DESCONTOS =====================
 		descontos.InssDesconto(proventos.TotalProventos);
@@ -540,7 +548,19 @@ public class folha {
 		descontos.FgtsDesconto(proventos.TotalProventos);
 		descontos.calcularTotalDescontos();
 
-		double salarioLiquido = proventos.TotalProventos - descontos.TotalDescontos;
+		double totalBeneficios = 0;
+		StringBuilder linhasBeneficios = new StringBuilder();
+		NumberFormat moedaBen = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
+		PreparedStatement stmtBen = conn.prepareStatement("SELECT b.nome, fb.desconto_folha FROM funcionarios_beneficios fb JOIN beneficios b ON b.id = fb.beneficio_id WHERE fb.funcionario_id = ? AND fb.ativo = 1 AND fb.desconto_folha > 0");
+		stmtBen.setInt(1, idEscolhido);
+		ResultSet rsBen = stmtBen.executeQuery();
+		while (rsBen.next()) {
+			double desc = rsBen.getDouble("desconto_folha");
+			totalBeneficios += desc;
+			linhasBeneficios.append(rsBen.getString("nome") + ": " + moedaBen.format(desc) + "\n");
+		}
+		double totalDescontos = descontos.TotalDescontos + totalBeneficios;
+		double salarioLiquido = proventos.TotalProventos - totalDescontos;
 
 		// ===================== CRIAR A FOLHA DO MES =====================
 		// =====================SE JA EXISTE FOLHA DO MES/ANO, USA ELA SE NAO, CRIAR UMA
@@ -596,7 +616,7 @@ public class folha {
 		stmtFolhaFunc.setDouble(9, descontos.Fgts);
 		stmtFolhaFunc.setDouble(10, proventos.TotalProventos - descontos.Inss);
 		stmtFolhaFunc.setDouble(11, descontos.Irrf);
-		stmtFolhaFunc.setDouble(12, descontos.TotalDescontos);
+		stmtFolhaFunc.setDouble(12, totalDescontos);
 		stmtFolhaFunc.setDouble(13, salarioLiquido);
 		stmtFolhaFunc.executeUpdate();
 
@@ -604,6 +624,8 @@ public class folha {
 
 		System.out.println();
 		System.out.println("=========== FOLHA DE PAGAMENTO ===========");
+		System.out.println("Empresa: " + nomeEmpresa);
+		System.out.println("CNPJ: " + cnpjEmpresa);
 		System.out.println("Referência: " + String.format("%02d/%d", mes, ano));
 		System.out.println("Funcionário: " + nomeFuncionario);
 		System.out.println("Cargo: " + cargoFuncionario);
@@ -615,6 +637,8 @@ public class folha {
 		System.out.println("DESCONTOS");
 		System.out.println("INSS:            " + moeda.format(descontos.Inss));
 		System.out.println("IRRF:            " + moeda.format(descontos.Irrf));
+		System.out.print(linhasBeneficios);
+		System.out.println("Total descontos: " + moeda.format(totalDescontos));
 		System.out.println("------------------------------------------");
 		System.out.println("SALÁRIO LÍQUIDO: " + moeda.format(salarioLiquido));
 		System.out.println("------------------------------------------");
