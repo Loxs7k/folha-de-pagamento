@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS "empresas" (
 	"telefone"	TEXT,
 	"data_cadastro"	TEXT NOT NULL,
 	"ativo"	INTEGER NOT NULL DEFAULT 1,
-	PRIMARY KEY("id" AUTOINCREMENT)
+PRIMARY KEY("id" AUTOINCREMENT)
 );
 CREATE TABLE IF NOT EXISTS "folha_funcionarios" (
 	"id"	INTEGER,
@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS "folha_funcionarios" (
 	"base_irpf"	REAL NOT NULL,
 	"valor_irpf"	REAL NOT NULL,
 	"total_descontos"	REAL NOT NULL,
-	"salario_liquido"	REAL NOT NULL,
+	"salario_liquido"	REAL NOT NULL, 
+	"status"	TEXT DEFAULT 'CONFIRMADA',
 	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("folha_id") REFERENCES "folhas_pagamento"("id"),
 	FOREIGN KEY("funcionario_id") REFERENCES "funcionarios"("id")
