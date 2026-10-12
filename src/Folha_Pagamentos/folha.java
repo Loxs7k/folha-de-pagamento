@@ -34,6 +34,7 @@ public class folha {
 				System.out.println("2 - Lançar folha de pagamento");
 				System.out.println("3 - Histórico de folhas");
 				System.out.println("4 - Benefícios");
+				System.out.println("5 - Editar funcionário");
 				System.out.println("0 - Sair");
 				System.out.print("Escolha: ");
 				opcao = sc.nextInt();
@@ -47,6 +48,8 @@ public class folha {
 					historicoFolhas(conn, empresaId);
 				} else if (opcao == 4) {
 					menuBeneficios(sc, conn, empresaId);
+				} else if (opcao == 5) {
+					editarFuncionario(sc, conn, empresaId);
 				} else if (opcao != 0) {
 					System.out.println("Opção inválida.");
 				}
@@ -453,6 +456,49 @@ public class folha {
 		System.out.println("===========================================");
 	}
 
+	// ===================== EDITAR FUNCIONARIO =====================
+	public static void editarFuncionario(Scanner sc, Connection conn, int empresaId) throws SQLException {
+		int funcionarioId = escolherFuncionario(sc, conn, empresaId);
+		if (funcionarioId == 0) {
+			return;
+		}
+
+		System.out.println();
+		System.out.println("1 - Alterar cargo");
+		System.out.println("2 - Alterar salário base");
+		System.out.println("0 - Voltar");
+		System.out.print("Escolha: ");
+		int opcao = sc.nextInt();
+		sc.nextLine();
+
+		if (opcao == 1) {
+			String novoCargo = lerObrigatorio(sc, "Novo cargo: ");
+			PreparedStatement stmt = conn
+					.prepareStatement("UPDATE funcionarios SET cargo = ? WHERE id = ? AND empresa_id = ?");
+			stmt.setString(1, novoCargo);
+			stmt.setInt(2, funcionarioId);
+			stmt.setInt(3, empresaId);
+			stmt.executeUpdate();
+			System.out.println("Cargo atualizado com sucesso!");
+		} else if (opcao == 2) {
+			System.out.print("Novo salário base: ");
+			double novoSalario = sc.nextDouble();
+			while (novoSalario < 0) {
+				System.out.print("Salário não pode ser negativo. Digite novamente: ");
+				novoSalario = sc.nextDouble();
+			}
+			sc.nextLine();
+			PreparedStatement stmt = conn
+					.prepareStatement("UPDATE funcionarios SET salario_base = ? WHERE id = ? AND empresa_id = ?");
+			stmt.setDouble(1, novoSalario);
+			stmt.setInt(2, funcionarioId);
+			stmt.setInt(3, empresaId);
+			stmt.executeUpdate();
+			System.out.println("Salário atualizado com sucesso!");
+		} else if (opcao != 0) {
+			System.out.println("Opção inválida.");
+		}
+	}
 	// ===================== CADASTRAR FUNCIONÁRIO =====================
 	public static void cadastrarFuncionario(Scanner sc, Connection conn, int empresaId) throws SQLException {
 
