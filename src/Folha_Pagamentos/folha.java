@@ -288,6 +288,8 @@ public class folha {
 			System.out.println("=========== BENEFÍCIOS ===========");
 			System.out.println("1 - Dar benefício a um funcionário");
 			System.out.println("2 - Ver benefícios de um funcionário");
+			System.out.println("3 - Editar benefício de um funcionário");
+			System.out.println("4 - Remover benefício de um funcionário");
 			System.out.println("0 - Voltar");
 			System.out.print("Escolha: ");
 			opcao = sc.nextInt();
@@ -297,6 +299,10 @@ public class folha {
 				atribuirBeneficio(sc, conn, empresaId);
 			} else if (opcao == 2) {
 				listarBeneficios(sc, conn, empresaId);
+			} else if (opcao == 3) {
+				editarBeneficio(sc, conn, empresaId);
+			} else if (opcao == 4) {
+				removerBeneficio(sc, conn, empresaId);
 			} else if (opcao != 0) {
 				System.out.println("Opção inválida.");
 			}
@@ -431,13 +437,152 @@ public class folha {
 		System.out.println("=================================================");
 	}
 
+	
+	// ===================== ESCOLHER BENEFICIO DO FUNCIONARIO =====================
+	public static int escolherBeneficioDoFuncionario(Scanner sc, Connection conn, int funcionarioId)
+			throws SQLException {
+		PreparedStatement stmt = conn.prepareStatement(
+				"SELECT fb.id, b.nome, fb.valor, fb.desconto_folha FROM funcionarios_beneficios fb "
+						+ "JOIN beneficios b ON b.id = fb.beneficio_id "
+						+ "WHERE fb.funcionario_id = ? AND fb.ativo = 1 ORDER BY b.nome");
+		stmt.setInt(1, funcionarioId);
+		ResultSet rs = stmt.executeQuery();
+
+		NumberFormat moeda = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
+
+		System.out.println("Benefícios do funcionário:");
+		boolean achou = false;
+		while (rs.next()) {
+			achou = true;
+			System.out.println(rs.getInt("id") + " - " + rs.getString("nome") + " | Valor: "
+					+ moeda.format(rs.getDouble("valor")) + " | Desconto: "
+					+ moeda.format(rs.getDouble("desconto_folha")));
+		}
+		if (!achou) {
+			System.out.println("Esse funcionário não tem benefícios.");
+			return 0;
+		}
+
+		System.out.print("Digite o ID do benefício: ");
+		int id = sc.nextInt();
+		sc.nextLine();
+
+		PreparedStatement stmtOk = conn.prepareStatement(
+				"SELECT 1 FROM funcionarios_beneficios WHERE id = ? AND funcionario_id = ? AND ativo = 1");
+		stmtOk.setInt(1, id);
+		stmtOk.setInt(2, funcionarioId);
+		if (!stmtOk.executeQuery().next()) {
+			System.out.println("Benefício não encontrado.");
+			return 0;
+		}
+		return id;
+	}
+
+	// ===================== DESCONTO SOBRE O VALOR DO BENEFICIO? =====================
+	public static boolean sobreValor(String nomeBeneficio) {
+		String nome = nomeBeneficio.toLowerCase();
+		return nome.contains("refei") || nome.contains("aliment");
+	}
+	// ===================== LIMITE DE DESCONTO =====================
+	public static double limiteDesconto(String nomeBeneficio, double valor, double salarioBase) {
+		String nome = nomeBeneficio.toLowerCase();
+		if (nome.contains("transporte")) {
+			return Math.min(salarioBase * 0.06, valor);
+		} else if (nome.contains("refei") || nome.contains("aliment")) {
+			return valor * 0.20;
+		}
+		return salarioBase * 0.10;
+	}
+
+	// ===================== EDITAR BENEFICIO =====================
+	public static void editarBeneficio(Scanner sc, Connection conn, int empresaId) throws SQLException {
+		int funcionarioId = escolherFuncionario(sc, conn, empresaId);
+		if (funcionarioId == 0) {
+			return;
+		}
+		int fbId = escolherBeneficioDoFuncionario(sc, conn, funcionarioId);
+		if (fbId == 0) {
+			return;
+		}
+
+		PreparedStatement stmtDados = conn.prepareStatement(
+				"SELECT b.nome, f.salario_base FROM funcionarios_beneficios fb "
+						+ "JOIN beneficios b ON b.id = fb.beneficio_id "
+						+ "JOIN funcionarios f ON f.id = fb.funcionario_id WHERE fb.id = ?");
+		stmtDados.setInt(1, fbId);
+		ResultSet dados = stmtDados.executeQuery();
+		dados.next();
+		String nome = dados.getString("nome");
+		double salarioBase = dados.getDouble("salario_base");
+
+		System.out.print("Novo valor do benefício (R$): ");
+		double valor = sc.nextDouble();
+		while (valor < 0) {
+			System.out.print("Valor não pode ser negativo. Digite novamente: ");
+			valor = sc.nextDouble();
+		}
+
+		double limite = limiteDesconto(nome, valor, salarioBase);
+		double base = sobreValor(nome) ? valor : salarioBase;
+		String sobre = sobreValor(nome) ? "do valor do benefício" : "do salário";
+		double desconto = 0;
+		if (limite > 0 && base > 0) {
+			double maxPct = limite / base * 100;
+			System.out.println(String.format("Desconto máximo permitido: %.2f%% %s (R$ %.2f)", maxPct, sobre, limite));
+			System.out.print("Desconto em % " + sobre + " (0 se a empresa paga tudo): ");
+			double pct = sc.nextDouble();
+			while (pct < 0 || pct > maxPct + 0.0001) {
+				System.out.print("Percentual inválido. Digite entre 0 e " + String.format("%.2f", maxPct) + ": ");
+				pct = sc.nextDouble();
+			}
+			desconto = Math.round(base * pct / 100 * 100) / 100.0;
+		} else {
+			System.out.println("Esse benefício não permite desconto na folha.");
+		}
+		sc.nextLine();
+
+		PreparedStatement stmt = conn.prepareStatement(
+				"UPDATE funcionarios_beneficios SET valor = ?, desconto_folha = ? WHERE id = ? AND funcionario_id = ?");
+		stmt.setDouble(1, valor);
+		stmt.setDouble(2, desconto);
+		stmt.setInt(3, fbId);
+		stmt.setInt(4, funcionarioId);
+		stmt.executeUpdate();
+
+		NumberFormat moeda = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
+		System.out.println(nome + " atualizado! Desconto na folha: " + moeda.format(desconto));
+	}
+	// ===================== REMOVER BENEFICIO =====================
+	public static void removerBeneficio(Scanner sc, Connection conn, int empresaId) throws SQLException {
+		int funcionarioId = escolherFuncionario(sc, conn, empresaId);
+		if (funcionarioId == 0) {
+			return;
+		}
+		int fbId = escolherBeneficioDoFuncionario(sc, conn, funcionarioId);
+		if (fbId == 0) {
+			return;
+		}
+
+		String resposta = lerObrigatorio(sc, "Tem certeza que quer remover? (s/n): ");
+		if (resposta.equalsIgnoreCase("s")) {
+			PreparedStatement stmt = conn.prepareStatement(
+					"UPDATE funcionarios_beneficios SET ativo = 0 WHERE id = ? AND funcionario_id = ?");
+			stmt.setInt(1, fbId);
+			stmt.setInt(2, funcionarioId);
+			stmt.executeUpdate();
+			System.out.println("Benefício removido com sucesso!");
+		} else {
+			System.out.println("Nada foi removido.");
+		}
+	}
 	// ===================== HISTORICO DE FOLHAS =====================
 	public static void historicoFolhas(Connection conn, int empresaId) throws SQLException {
 		PreparedStatement stmt = conn.prepareStatement(
 				"SELECT e.nome_fantasia, e.cnpj, fp.mes, fp.ano, fu.nome, fu.cargo, ff.salario_base, ff.total_proventos, ff.valor_inss, ff.valor_irpf, ff.total_descontos, ff.salario_liquido, ff.valor_fgts, ff.status "
 						+ "FROM folha_funcionarios ff " + "JOIN folhas_pagamento fp ON fp.id = ff.folha_id "
-						+ "JOIN funcionarios fu ON fu.id = ff.funcionario_id " + "JOIN empresas e ON e.id = fu.empresa_id "
-						+ "WHERE fu.empresa_id = ? " + "ORDER BY fp.ano DESC, fp.mes DESC, fu.nome");
+						+ "JOIN funcionarios fu ON fu.id = ff.funcionario_id "
+						+ "JOIN empresas e ON e.id = fu.empresa_id " + "WHERE fu.empresa_id = ? "
+						+ "ORDER BY fp.ano DESC, fp.mes DESC, fu.nome");
 		stmt.setInt(1, empresaId);
 		ResultSet rs = stmt.executeQuery();
 
@@ -447,7 +592,8 @@ public class folha {
 		while (rs.next()) {
 			achou = true;
 			String cnpj = rs.getString("cnpj").replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
-			double beneficios = rs.getDouble("total_descontos") - rs.getDouble("valor_inss") - rs.getDouble("valor_irpf");
+			double beneficios = rs.getDouble("total_descontos") - rs.getDouble("valor_inss")
+					- rs.getDouble("valor_irpf");
 
 			System.out.println();
 			System.out.println("=========== FOLHA DE PAGAMENTO ===========");
@@ -530,8 +676,8 @@ public class folha {
 		sc.nextLine();
 
 		if (opcao == 1) {
-			PreparedStatement stmtConf = conn
-					.prepareStatement("UPDATE folha_funcionarios SET status = 'CONFIRMADA' WHERE id = ? AND status = 'PENDENTE'");
+			PreparedStatement stmtConf = conn.prepareStatement(
+					"UPDATE folha_funcionarios SET status = 'CONFIRMADA' WHERE id = ? AND status = 'PENDENTE'");
 			stmtConf.setInt(1, id);
 			stmtConf.executeUpdate();
 			System.out.println("Folha confirmada com sucesso!");
@@ -550,6 +696,7 @@ public class folha {
 			System.out.println("Opção inválida.");
 		}
 	}
+
 	// ===================== EDITAR FUNCIONARIO =====================
 	public static void editarFuncionario(Scanner sc, Connection conn, int empresaId) throws SQLException {
 		int funcionarioId = escolherFuncionario(sc, conn, empresaId);
