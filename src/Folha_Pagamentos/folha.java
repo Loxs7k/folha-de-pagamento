@@ -109,57 +109,32 @@ public class folha {
 		return cnpj;
 	}
 
-	// ===================== SENHA (HASH COM SALT) =====================
-	public static String hashSenha(String senha, byte[] salt) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-256");
-			md.update(salt);
-			byte[] hash = md.digest(senha.getBytes(StandardCharsets.UTF_8));
-			return Base64.getEncoder().encodeToString(hash);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public static String criarHash(String senha) {
-		byte[] salt = new byte[16];
-		new SecureRandom().nextBytes(salt);
-		return Base64.getEncoder().encodeToString(salt) + ":" + hashSenha(senha, salt);
-	}
-
-	public static boolean confereSenha(String senha, String guardado) {
-		String[] partes = guardado.split(":");
-		if (partes.length != 2)
-			return false;
-		byte[] salt = Base64.getDecoder().decode(partes[0]);
-		String hash = hashSenha(senha, salt);
-		return MessageDigest.isEqual(hash.getBytes(StandardCharsets.UTF_8), partes[1].getBytes(StandardCharsets.UTF_8));
-	}
 
 	// ===================== ENTRAR (LOGIN DA EMPRESA) =====================
 	public static int entrarEmpresa(Scanner sc, Connection conn) throws SQLException {
-		String cnpj = lerCnpj(sc);
+	    String cnpj = lerCnpj(sc);
 
-		for (int tentativa = 1; tentativa <= 3; tentativa++) {
-			String senha = lerObrigatorio(sc, "Senha: ");
+	    for (int tentativa = 1; tentativa <= 3; tentativa++) {
+	        String senha = lerObrigatorio(sc, "Senha: ");
 
-			PreparedStatement stmt = conn.prepareStatement("SELECT e.id, e.nome_fantasia, u.senha FROM empresas e "
-					+ "JOIN usuarios u ON u.empresa_id = e.id " + "WHERE e.cnpj = ? AND e.ativo = 1 AND u.ativo = 1");
-			stmt.setString(1, cnpj);
-			ResultSet rs = stmt.executeQuery();
+	        try (PreparedStatement stmt = conn.prepareStatement("SELECT e.id, e.nome_fantasia, u.senha FROM empresas e "
+	                + "JOIN usuarios u ON u.empresa_id = e.id WHERE e.cnpj = ? AND e.ativo = 1 AND u.ativo = 1")) {
+	            stmt.setString(1, cnpj);
+	            try (ResultSet rs = stmt.executeQuery()) {
+	                while (rs.next()) {
+	                	if (Senha.confereSenha(senha, rs.getString("senha"))) {
+	                        System.out.println("Bem-vindo, " + rs.getString("nome_fantasia") + "!");
+	                        return rs.getInt("id");
+	                    }
+	                }
+	            }
+	        }
 
-			while (rs.next()) {
-				if (confereSenha(senha, rs.getString("senha"))) {
-					System.out.println("Bem-vindo, " + rs.getString("nome_fantasia") + "!");
-					return rs.getInt("id");
-				}
-			}
+	        System.out.println("CNPJ ou senha incorretos. Tentativa " + tentativa + " de 3.");
+	    }
 
-			System.out.println("CNPJ ou senha incorretos. Tentativa " + tentativa + " de 3.");
-		}
-
-		System.out.println("Muitas tentativas. Voltando ao menu.");
-		return 0;
+	    System.out.println("Muitas tentativas. Voltando ao menu.");
+	    return 0;
 	}
 
 	// ===================== REDEFINIR SENHA =====================
@@ -193,7 +168,7 @@ public class folha {
 		String novaSenha = lerSenhaComConfirmacao(sc);
 
 		PreparedStatement stmtUp = conn.prepareStatement("UPDATE usuarios SET senha = ? WHERE empresa_id = ?");
-		stmtUp.setString(1, criarHash(novaSenha));
+		stmtUp.setString(1, Senha.criarHash(novaSenha));
 		stmtUp.setInt(2, empresaId);
 		int alterados = stmtUp.executeUpdate();
 
@@ -202,7 +177,7 @@ public class folha {
 					"INSERT INTO usuarios (empresa_id, usuario, senha, email, data_cadastro) VALUES (?, ?, ?, ?, ?)");
 			stmtUser.setInt(1, empresaId);
 			stmtUser.setString(2, cnpj);
-			stmtUser.setString(3, criarHash(novaSenha));
+			stmtUser.setString(3, Senha.criarHash(novaSenha));
 			stmtUser.setString(4, email);
 			stmtUser.setString(5, LocalDate.now().toString());
 			stmtUser.executeUpdate();
@@ -264,7 +239,7 @@ public class folha {
 				"INSERT INTO usuarios (empresa_id, usuario, senha, email, data_cadastro) VALUES (?, ?, ?, ?, ?)");
 		stmtUser.setInt(1, empresaId);
 		stmtUser.setString(2, cnpj);
-		stmtUser.setString(3, criarHash(senha));
+		stmtUser.setString(3, Senha.criarHash(senha));
 		stmtUser.setString(4, email);
 		stmtUser.setString(5, LocalDate.now().toString());
 		stmtUser.executeUpdate();
