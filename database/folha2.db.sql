@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS "empresas" (
 	"telefone"	TEXT,
 	"data_cadastro"	TEXT NOT NULL,
 	"ativo"	INTEGER NOT NULL DEFAULT 1,
-	PRIMARY KEY("id" AUTOINCREMENT)
+PRIMARY KEY("id" AUTOINCREMENT)
 );
 CREATE TABLE IF NOT EXISTS "folha_funcionarios" (
 	"id"	INTEGER,
@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS "folha_funcionarios" (
 	"base_irpf"	REAL NOT NULL,
 	"valor_irpf"	REAL NOT NULL,
 	"total_descontos"	REAL NOT NULL,
-	"salario_liquido"	REAL NOT NULL,
+	"salario_liquido"	REAL NOT NULL, 
+	"status"	TEXT DEFAULT 'CONFIRMADA',
 	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("folha_id") REFERENCES "folhas_pagamento"("id"),
 	FOREIGN KEY("funcionario_id") REFERENCES "funcionarios"("id")
@@ -117,7 +118,7 @@ INSERT INTO "beneficios" VALUES (5,'Plano Odontológico','Assistência odontoló
 INSERT INTO "cargos" VALUES (1,'Auxiliar Administrativo','Profissional responsável por atividades administrativas');
 INSERT INTO "cargos" VALUES (2,'Analista Administrativo','Profissional responsável por atividades de análise e suporte administrativo');
 INSERT INTO "empresas" VALUES (1,'Administracao de Facilities LTDA','Administracao de Facilities','12345678000199','contato@facilities.com.br','(31) 3333-4444','2026-10-03',1);
-INSERT INTO "folha_funcionarios" VALUES (1,1,1,2500.0,2727.27,2727.27,2627.27,212.14,2627.27,210.18,2415.13,0.0,312.14,2415.13);
+INSERT INTO "folha_funcionarios" VALUES (1,1,1,2500.0,2727.27,2727.27,2627.27,212.14,2627.27,210.18,2415.13,0.0,312.14,2415.13,'CONFIRMADA');
 INSERT INTO "folhas_pagamento" VALUES (1,9,2026,'2026-09-30','ABERTA');
 INSERT INTO "funcionarios" VALUES (1,'João da Silva','11111111111','1995-05-20','2026-01-10','Auxiliar Administrativo',2500.0,1);
 INSERT INTO "funcionarios" VALUES (2,'Maria Oliveira','22222222222','1998-08-15','2026-02-05','Analista Administrativo',3500.0,1);
