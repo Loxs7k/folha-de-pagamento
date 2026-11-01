@@ -63,17 +63,6 @@ public class folha {
 		}
 	}
 
-	// ===================== LER CAMPO OBRIGATORIO =====================
-	public static String lerObrigatorio(Scanner sc, String texto) {
-		System.out.print(texto);
-		String valor = sc.nextLine().trim();
-		while (valor.isEmpty()) {
-			System.out.print("Campo obrigatório. " + texto);
-			valor = sc.nextLine().trim();
-		}
-
-		return valor;
-	}
 
 	// ===================== MENU INICIAL =====================
 	public static int menuInicial(Scanner sc, Connection conn) throws SQLException {
@@ -99,23 +88,12 @@ public class folha {
 		return empresaId;
 	}
 
-	// ===================== LER CNPJ =====================
-	public static String lerCnpj(Scanner sc) {
-		String cnpj = lerObrigatorio(sc, "CNPJ da empresa (só números): ");
-		while (!cnpj.matches("\\d{14}")) {
-			System.out.print("CNPJ deve ter 14 números. Digite novamente: ");
-			cnpj = sc.nextLine().trim();
-		}
-		return cnpj;
-	}
-
-
 	// ===================== ENTRAR (LOGIN DA EMPRESA) =====================
 	public static int entrarEmpresa(Scanner sc, Connection conn) throws SQLException {
-	    String cnpj = lerCnpj(sc);
+		String cnpj = Leitor.lerCnpj(sc);
 
 	    for (int tentativa = 1; tentativa <= 3; tentativa++) {
-	        String senha = lerObrigatorio(sc, "Senha: ");
+	    	String senha = Leitor.lerObrigatorio(sc, "Senha: ");
 
 	        try (PreparedStatement stmt = conn.prepareStatement("SELECT e.id, e.nome_fantasia, u.senha FROM empresas e "
 	                + "JOIN usuarios u ON u.empresa_id = e.id WHERE e.cnpj = ? AND e.ativo = 1 AND u.ativo = 1")) {
@@ -140,9 +118,9 @@ public class folha {
 	// ===================== REDEFINIR SENHA =====================
 	public static void redefinirSenha(Scanner sc, Connection conn) throws SQLException {
 		System.out.println("Para redefinir a senha, confirme os dados da empresa.");
-		String cnpj = lerCnpj(sc);
-		String email = lerObrigatorio(sc, "Email da empresa: ");
-		String telefone = lerObrigatorio(sc, "Telefone da empresa: ");
+		String cnpj = Leitor.lerCnpj(sc);
+		String email = Leitor.lerObrigatorio(sc, "Email da empresa: ");
+		String telefone = Leitor.lerObrigatorio(sc, "Telefone da empresa: ");
 
 		PreparedStatement stmt = conn
 				.prepareStatement("SELECT id, email, telefone FROM empresas WHERE cnpj = ? AND ativo = 1");
@@ -165,7 +143,7 @@ public class folha {
 		}
 
 		System.out.println("Dados conferidos! Defina a nova senha.");
-		String novaSenha = lerSenhaComConfirmacao(sc);
+		String novaSenha = Leitor.lerSenhaComConfirmacao(sc);
 
 		PreparedStatement stmtUp = conn.prepareStatement("UPDATE usuarios SET senha = ? WHERE empresa_id = ?");
 		stmtUp.setString(1, Senha.criarHash(novaSenha));
@@ -186,25 +164,9 @@ public class folha {
 		System.out.println("Senha redefinida com sucesso! Agora escolha Entrar.");
 	}
 
-	// ===================== SENHA COM CONFIRMACAO =====================
-	public static String lerSenhaComConfirmacao(Scanner sc) {
-		while (true) {
-			String senha = lerObrigatorio(sc, "Senha (mínimo 6 caracteres): ");
-			if (senha.length() < 6) {
-				System.out.println("Senha muito curta.");
-				continue;
-			}
-			String confirmacao = lerObrigatorio(sc, "Confirme a senha: ");
-			if (senha.equals(confirmacao)) {
-				return senha;
-			}
-			System.out.println("As senhas não conferem. Tente novamente.");
-		}
-	}
-
 	// ===================== CADASTRAR EMPRESA =====================
 	public static void cadastrarEmpresa(Scanner sc, Connection conn) throws SQLException {
-		String cnpj = lerCnpj(sc);
+		String cnpj = Leitor.lerCnpj(sc);
 
 		PreparedStatement stmtBusca = conn.prepareStatement("SELECT id FROM empresas WHERE cnpj = ?");
 		stmtBusca.setString(1, cnpj);
@@ -213,12 +175,12 @@ public class folha {
 			return;
 		}
 
-		String razaoSocial = lerObrigatorio(sc, "Razão social: ");
-		String nomeFantasia = lerObrigatorio(sc, "Nome fantasia: ");
-		String email = lerObrigatorio(sc, "Email: ");
-		String telefone = lerObrigatorio(sc, "Telefone: ");
+		String razaoSocial = Leitor.lerObrigatorio(sc, "Razão social: ");
+		String nomeFantasia = Leitor.lerObrigatorio(sc, "Nome fantasia: ");
+		String email = Leitor.lerObrigatorio(sc, "Email: ");
+		String telefone = Leitor.lerObrigatorio(sc, "Telefone: ");
 
-		String senha = lerSenhaComConfirmacao(sc);
+		String senha = Leitor.lerSenhaComConfirmacao(sc);
 
 		PreparedStatement stmtNova = conn.prepareStatement(
 				"INSERT INTO empresas (razao_social, nome_fantasia, cnpj, email, telefone, data_cadastro) VALUES (?, ?, ?, ?, ?, ?)",
@@ -538,7 +500,7 @@ public class folha {
 			return;
 		}
 
-		String resposta = lerObrigatorio(sc, "Tem certeza que quer remover? (s/n): ");
+		String resposta = Leitor.lerObrigatorio(sc, "Tem certeza que quer remover? (s/n): ");
 		if (resposta.equalsIgnoreCase("s")) {
 			PreparedStatement stmt = conn.prepareStatement(
 					"UPDATE funcionarios_beneficios SET ativo = 0 WHERE id = ? AND funcionario_id = ?");
@@ -780,7 +742,7 @@ public class folha {
 			stmtConf.executeUpdate();
 			System.out.println("Folha confirmada com sucesso!");
 		} else if (opcao == 2) {
-			String resposta = lerObrigatorio(sc, "Tem certeza que quer apagar? (s/n): ");
+			String resposta = Leitor.lerObrigatorio(sc, "Tem certeza que quer apagar? (s/n): ");
 			if (resposta.equalsIgnoreCase("s")) {
 				PreparedStatement stmtApagar = conn
 						.prepareStatement("DELETE FROM folha_funcionarios WHERE id = ? AND status = 'PENDENTE'");
@@ -811,7 +773,7 @@ public class folha {
 		sc.nextLine();
 
 		if (opcao == 1) {
-			String novoCargo = lerObrigatorio(sc, "Novo cargo: ");
+			String novoCargo = Leitor.lerObrigatorio(sc, "Novo cargo: ");
 			PreparedStatement stmt = conn
 					.prepareStatement("UPDATE funcionarios SET cargo = ? WHERE id = ? AND empresa_id = ?");
 			stmt.setString(1, novoCargo);
