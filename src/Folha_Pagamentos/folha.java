@@ -15,9 +15,16 @@ public class folha {
 		String url = "jdbc:sqlite:database/folha.db";
 
 		try (Connection conn = DriverManager.getConnection(url)) {
+			
 
 			// Login ou cadastro da empresa
 			int empresaId = Empresa.menuInicial(sc, conn);
+
+			// -1 significa que a pessoa escolheu sair na tela inicial
+			if (empresaId == -1) {
+				System.out.println("Até logo!");
+				return;
+			}
 
 			// Menu principal do sistema
 			int opcao = -1;
@@ -29,6 +36,7 @@ public class folha {
 				System.out.println("4 - Benefícios");
 				System.out.println("5 - Editar funcionário");
 				System.out.println("6 - Folhas pendentes");
+				System.out.println("7 - Funcionários");
 				System.out.println("0 - Sair");
 				System.out.print("Escolha: ");
 				opcao = sc.nextInt();
@@ -46,6 +54,8 @@ public class folha {
 					FuncionarioMenu.editarFuncionario(sc, conn, empresaId);
 				} else if (opcao == 6) {
 					FolhaPagamento.folhasAConfirmar(sc, conn, empresaId);
+				} else if (opcao == 7) {
+					FuncionarioMenu.menuFuncionarios(sc, conn, empresaId);
 				} else if (opcao != 0) {
 					System.out.println("Opção inválida.");
 				}
