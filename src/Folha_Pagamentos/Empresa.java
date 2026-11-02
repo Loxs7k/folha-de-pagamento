@@ -10,13 +10,14 @@ import java.util.Scanner;
 
 public class Empresa {
 
-	// Mostra o menu inicial e só sai quando a empresa entrar no sistema
+	// Mostra o menu inicial e só sai quando a empresa entrar (ou escolher sair)
 	public static int menuInicial(Scanner sc, Connection conn) throws SQLException {
 		int empresaId = 0;
 		while (empresaId == 0) {
 			System.out.println("1 - Entrar");
 			System.out.println("2 - Cadastrar empresa");
 			System.out.println("3 - Redefinir senha");
+			System.out.println("0 - Sair");
 			System.out.print("Escolha: ");
 			int opcao = sc.nextInt();
 			sc.nextLine();
@@ -27,6 +28,8 @@ public class Empresa {
 				cadastrarEmpresa(sc, conn);
 			} else if (opcao == 3) {
 				redefinirSenha(sc, conn);
+			} else if (opcao == 0) {
+				return -1;
 			} else {
 				System.out.println("Opção inválida.");
 			}
@@ -129,7 +132,7 @@ public class Empresa {
 		// Pede os dados da empresa e a senha
 		String razaoSocial = Leitor.lerObrigatorio(sc, "Razão social: ");
 		String nomeFantasia = Leitor.lerObrigatorio(sc, "Nome fantasia: ");
-		String email = Leitor.lerObrigatorio(sc, "Email: ");
+		String email = Leitor.lerEmail(sc, "Email: ");
 		String telefone = Leitor.lerObrigatorio(sc, "Telefone: ");
 		String senha = Leitor.lerSenhaComConfirmacao(sc);
 
