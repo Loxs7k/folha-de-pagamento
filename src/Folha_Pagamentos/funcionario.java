@@ -10,7 +10,7 @@ public class funcionario {
 	public LocalDate DataAdmissao;
 	public String Cargo;
 	public double SalarioBase;
-	
+	String Email;
 	
 	
 }
