@@ -27,9 +27,12 @@ public class FuncionarioMenu {
 		}
 
 		// Confere se o ID digitado é de um funcionário dessa empresa
-		System.out.print("Digite o ID do funcionário: ");
+		System.out.print("Digite o ID do funcionário (0 para voltar): ");
 		int id = sc.nextInt();
 		sc.nextLine();
+		if (id == 0) {
+			return 0;
+		}
 
 		PreparedStatement stmtOk = conn.prepareStatement("SELECT 1 FROM funcionarios WHERE id = ? AND empresa_id = ?");
 		stmtOk.setInt(1, id);
