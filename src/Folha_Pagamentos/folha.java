@@ -15,7 +15,6 @@ public class folha {
 		String url = "jdbc:sqlite:database/folha.db";
 
 		try (Connection conn = DriverManager.getConnection(url)) {
-			
 
 			// Login ou cadastro da empresa
 			int empresaId = Empresa.menuInicial(sc, conn);
@@ -65,4 +64,5 @@ public class folha {
 			System.out.println("Erro no banco: " + e.getMessage());
 		}
 	}
+
 }
